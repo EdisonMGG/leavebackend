@@ -126,7 +126,7 @@ app.post("/studlogin", (req, res) => {
                                 res.json({ "status": "unable to create token" })
                             }
                             else {
-                                res.json({ "status": "success", "userid": response[0]._id, "token": token })
+                                res.json({ "status": "success", "userid": response[0]._id, "token": token, "student_rollnum":response[0].student_rollnum})
                             }
                         })
                     }
@@ -331,11 +331,12 @@ app.post('/approveLeave', (req, res) => {
 });
 
 
-app.get('/getrejectedleaves/:rollno', (req, res) => {
-    const { id } = req.params;
+app.get('/getrejectedleaves/:student_rollnum', (req, res) => {
+    const student_rollnum = req.params.student_rollnum; // Get userid from URL parameters
+    console.log("rollno:", student_rollnum);
 
-    // Find all rejected leaves for the student by rollno
-    StudLeavesModel.find({ id: id, status: 'rejected' })
+    // Fetch all rejected leaves for the student by rollno
+    StudLeavesModel.find({ rollno: student_rollnum, status: 'rejected' })
         .then(rejectedLeaves => {
             if (rejectedLeaves.length > 0) {
                 res.json(rejectedLeaves);
@@ -345,6 +346,40 @@ app.get('/getrejectedleaves/:rollno', (req, res) => {
         })
         .catch(error => {
             res.status(500).json({ error: "An error occurred while fetching rejected leaves.", details: error.message });
+        });
+});
+
+app.get('/getapprovedleaves/:student_rollnum', (req, res) => {
+    const student_rollnum = req.params.student_rollnum; // Get userid from URL parameters
+
+    // Fetch all rejected leaves for the student by rollno
+    StudLeavesModel.find({ rollno: student_rollnum, status: 'approved' })
+        .then(rejectedLeaves => {
+            if (rejectedLeaves.length > 0) {
+                res.json(rejectedLeaves);
+            } else {
+                res.status(404).json({ message: "No rejected leaves found for this student." });
+            }
+        })
+        .catch(error => {
+            res.status(500).json({ error: "An error occurred while fetching rejected leaves.", details: error.message });
+        });
+});
+
+app.get('/pending/:student_rollnum', (req, res) => {
+    const student_rollnum = req.params.student_rollnum; // Get userid from URL parameters
+
+    // Fetch all rejected leaves for the student by rollno
+    StudLeavesModel.find({ rollno: student_rollnum})
+        .then(rejectedLeaves => {
+            if (rejectedLeaves.length > 0) {
+                res.json(rejectedLeaves);
+            } else {
+                res.status(404).json({ message: "No leaves found for this student." });
+            }
+        })
+        .catch(error => {
+            res.status(500).json({ error: "An error occurred while fetching leaves.", details: error.message });
         });
 });
 
@@ -368,6 +403,23 @@ app.get("/viewApprovedLeaves", (req, res) => {
     LeaveModel.find({ status: 'approved' })
         .then(leaves => res.json(leaves))
         .catch(error => res.status(500).json({ error: "Error fetching approved leaves" }));
+});
+
+app.post('/searchleaves', async (req, res) => {
+    const { Sdate, Edate } = req.body;
+    try {
+        const query = {};
+        if (Sdate && Edate) {
+            query.Sdate = { $gte: Sdate };
+            query.Edate = { $lte: Edate };
+        }
+
+        const leaveRecords = await Leave.find(query);
+        res.json(leaveRecords);
+    } catch (error) {
+        console.error("Error searching leave records:", error);
+        res.status(500).json({ message: "Error searching records" });
+    }
 });
 
 
